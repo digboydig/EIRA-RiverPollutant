@@ -1,7 +1,6 @@
 # River Pollutant Dispersion Model (3D)
 
-An interactive **Streamlit-based scientific visualization tool** for simulating and exploring the **3D advection–dispersion of pollutants in a river channel**.  
-Designed by Subodh Purohit for **educational, teaching, and demonstration purposes** in Environmental Engineering.
+An interactive **Streamlit-based scientific visualization tool** for simulating and exploring the **3D advection–dispersion of pollutants in a river channel**. Developed by Subodh Purohit for **educational, teaching, and demonstration purposes** in Environmental Engineering.
 
 ---
 
