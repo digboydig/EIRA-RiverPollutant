@@ -14,7 +14,7 @@ Capabilities:
 1.  3D Visualization: Uses Plotly for volumetric rendering of pollutant concentration clouds.
 2.  Release Modes:
     * Instantaneous (Pulse): Simulates a single dump of pollutant (Gaussian Puff).
-    * Continuous (Plume): Simulates a steady discharge over time (Gaussian Plume via integration).
+     
 3.  Visualization Scenarios:
     * Space-Time Plots (Time vs Length vs Depth/Breadth).
     * 3D Spatial Snapshot (Length vs Breadth vs Depth at a fixed time).
