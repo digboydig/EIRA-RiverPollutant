@@ -39,7 +39,7 @@ st.set_page_config(page_title="River Pollutant Dispersion Model", layout="wide")
 st.title("3D River Pollutant Dispersion Model")
 st.markdown("""
 This application simulates the transport of a pollutant in a river channel using the **Advection-Dispersion Equation**.
-You can visualize the concentration $C(x,y,z,t)$ for both **Instantaneous** (Puff) and **Continuous** (Plume) releases.
+You can visualize the concentration $C(x,y,z,t)$ for an **Instantaneous** (Puff) release.
 """)
 
 # --- 2. Sidebar Inputs: Simulation Parameters ---
@@ -67,12 +67,8 @@ if Dx == 0 or Dy == 0 or Dz == 0:
     st.stop()
 
 st.sidebar.header("3. Source Term")
-release_type = st.sidebar.radio("Release Type", ["Instantaneous (Pulse)", "Continuous (Discharge)"])
-
-if release_type == "Instantaneous (Pulse)":
-    M = st.sidebar.number_input("Total Mass M [kg]", value=10.0, step=1.0)
-else:
-    M = st.sidebar.number_input("Discharge Rate [kg/s]", value=0.1, step=0.01)
+# Removed Release Type Selector and Continuous logic
+M = st.sidebar.number_input("Total Mass M [kg]", value=10.0, step=1.0)
 
 st.sidebar.subheader("Source Location (Release Point)")
 x0 = st.sidebar.slider("x₀ (Length)", 0.0, L, 5.0)
@@ -103,29 +99,6 @@ def calculate_concentration_instantaneous(t, x, y, z, M, u, v, w, Dx, Dy, Dz, x0
     C = np.where(t > 0, C, 0.0)
     
     return C
-
-def calculate_concentration_continuous(t_eval, x, y, z, M_rate, u, v, w, Dx, Dy, Dz, x0, y0, z0, t_steps=30):
-    """
-    Numerical integration (superposition) for Continuous Source.
-    We sum up instantaneous puffs released from time 0 to t_eval.
-    """
-    if t_eval <= 0:
-        return np.zeros_like(x, dtype=float)
-        
-    C_total = np.zeros_like(x, dtype=float)
-    
-    # Discretize time from release start (0) to current time (t_eval)
-    taus = np.linspace(0, t_eval - 0.1, t_steps) 
-    d_tau = taus[1] - taus[0] if len(taus) > 1 else t_eval
-
-    # Superposition: Integral of Instantaneous(t - tau) d_tau
-    for tau in taus:
-        age = t_eval - tau 
-        puff_mass = M_rate * d_tau
-        C_puff = calculate_concentration_instantaneous(age, x, y, z, puff_mass, u, v, w, Dx, Dy, Dz, x0, y0, z0)
-        C_total += C_puff
-        
-    return C_total
 
 
 # --- 4. Main App Layout (Tabs) ---
@@ -171,10 +144,8 @@ with tab1:
         X, Y, Z = np.meshgrid(x_vals, y_vals, z_vals, indexing='ij')
         
         with st.spinner('Calculating 3D Field...'):
-            if release_type == "Instantaneous (Pulse)":
-                C = calculate_concentration_instantaneous(sim_time, X, Y, Z, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0)
-            else:
-                C = calculate_concentration_continuous(sim_time, X, Y, Z, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0)
+            # Always calculate Instantaneous
+            C = calculate_concentration_instantaneous(sim_time, X, Y, Z, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0)
 
         # Visualization Setup
         c_max = np.max(C)
@@ -199,7 +170,7 @@ with tab1:
                 zaxis_title='Depth (Z) [m]',
                 aspectmode='data'
             ),
-            title=f"Concentration Field at T = {sim_time}s ({release_type})",
+            title=f"Concentration Field at T = {sim_time}s (Instantaneous Pulse)",
             margin=dict(l=0, r=0, b=0, t=40)
         )
         
@@ -259,19 +230,8 @@ with tab1:
 
         # 3. Calculate Concentration
         with st.spinner('Calculating Space-Time Field...'):
-            if release_type == "Instantaneous (Pulse)":
-                C = calculate_concentration_instantaneous(T_grid, X_grid, Y_grid, Z_grid, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0)
-            else:
-                # Continuous Loop (Vectorized per time step)
-                C = np.zeros_like(T_grid)
-                for i in range(len(t_vals)):
-                    t_current = t_vals[i]
-                    x_slice = X_grid[i, :, :]
-                    y_slice = Y_grid[i, :, :]
-                    z_slice = Z_grid[i, :, :]
-                    
-                    c_slice = calculate_concentration_continuous(t_current, x_slice, y_slice, z_slice, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0, t_steps=20)
-                    C[i, :, :] = c_slice
+            # Always calculate Instantaneous
+            C = calculate_concentration_instantaneous(T_grid, X_grid, Y_grid, Z_grid, M, u, v, w_vel, Dx, Dy, Dz, x0, y0, z0)
 
         # 4. Plot
         c_max = np.max(C)
@@ -297,7 +257,7 @@ with tab1:
                 yaxis_title=labels['y'],
                 zaxis_title=labels['z'],
             ),
-            title=f"Space-Time Dispersion ({release_type})",
+            title="Space-Time Dispersion (Instantaneous Pulse)",
             margin=dict(l=0, r=0, b=0, t=40)
         )
         
@@ -312,7 +272,7 @@ with tab2:
     st.header("Theory & Background")
     
     st.markdown(r"""
-    ### 1. Instantaneous Point Source (Pulse)
+    ### Instantaneous Point Source (Pulse)
     The concentration $C$ at position $(x,y,z)$ and time $t$ for a mass $M$ released at $(x_0, y_0, z_0)$ is given by the fundamental Gaussian Puff equation:
     
     $$
@@ -323,13 +283,6 @@ with tab2:
     * $M$: Total mass of pollutant released [kg]
     * $u, v, w$: Mean velocities in x, y, z directions [m/s]
     * $D_x, D_y, D_z$: Dispersion coefficients [m²/s]
-    
-    ### 2. Continuous Point Source (Plume)
-    For a continuous discharge rate $\dot{M}$ (kg/s), the concentration is the integral of instantaneous puffs over time:
-    
-    $$
-    C(x,y,z,t) = \int_0^t C_{inst}(x,y,z, t-\tau) d\tau
-    $$
     
     *Note: This simulation assumes an unbounded domain for simplicity. In a real river, reflection boundary conditions would be applied at the river bed and banks.*
     """)
